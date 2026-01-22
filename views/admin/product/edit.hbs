@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>{{title}}</title>
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    <!-- Bootstrap icons-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link href="/css/styles.css" rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Navigation-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container px-4 px-lg-5">
+            <a class="navbar-brand" href="/">Shopii</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Admin</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pencil"></i> Edit Product
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form action="/admin/products/{{product.id}}" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="_method" value="PUT">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="productName" class="form-label">Product Name *</label>
+                                    <input type="text" class="form-control" id="productName" name="name" value="{{product.name}}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="productPrice" class="form-label">Price *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" class="form-control" id="productPrice" name="price" step="0.01" value="{{product.price}}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="productCategory" class="form-label">Category *</label>
+                                    <select class="form-select" id="productCategory" name="category" required>
+                                        <option value="">Select category...</option>
+                                        <option value="electronics" {{#if (eq product.category 'electronics')}}selected{{/if}}>Electronics</option>
+                                        <option value="clothing" {{#if (eq product.category 'clothing')}}selected{{/if}}>Clothing</option>
+                                        <option value="books" {{#if (eq product.category 'books')}}selected{{/if}}>Books</option>
+                                        <option value="home" {{#if (eq product.category 'home')}}selected{{/if}}>Home & Garden</option>
+                                        <option value="sports" {{#if (eq product.category 'sports')}}selected{{/if}}>Sports</option>
+                                        <option value="other" {{#if (eq product.category 'other')}}selected{{/if}}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="productStock" class="form-label">Stock Status *</label>
+                                    <select class="form-select" id="productStock" name="inStock" required>
+                                        <option value="true" {{#if product.inStock}}selected{{/if}}>In Stock</option>
+                                        <option value="false" {{#unless product.inStock}}selected{{/unless}}>Out of Stock</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Current Image Display -->
+                            <div class="mb-3">
+                                <label class="form-label">Current Image</label>
+                                <div class="text-center p-3 bg-light rounded">
+                                    <img src="{{product.image}}" alt="{{product.name}}" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                </div>
+                            </div>
+                            
+                            <!-- Image Upload Section -->
+                            <div class="mb-4">
+                                <label class="form-label">Update Product Image</label>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <!-- Image Upload Option -->
+                                        <div class="mb-3">
+                                            <label for="productImageFile" class="form-label">
+                                                <i class="bi bi-cloud-upload"></i> Upload New Image
+                                            </label>
+                                            <input type="file" class="form-control" id="productImageFile" name="productImage" 
+                                                   accept="image/*" onchange="handleImageUpload(this)">
+                                            <div class="form-text">Accepted formats: JPG, PNG, GIF, WebP (Max size: 5MB). Leave empty to keep current image.</div>
+                                        </div>
+                                        
+
+                                        
+                                        <!-- Image Preview -->
+                                        <div id="imagePreview" class="text-center" style="display: none;">
+                                            <img id="previewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearImage()">
+                                                    <i class="bi bi-trash"></i> Clear
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="productDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="productDescription" name="description" rows="4" placeholder="Enter product description...">{{product.description}}</textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <a href="/admin" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Back to Products
+                                </a>
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i class="bi bi-save"></i> Update Product
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- JavaScript for image handling -->
+                        <script>
+                            function handleImageUpload(input) {
+                                const preview = document.getElementById('imagePreview');
+                                const previewImg = document.getElementById('previewImg');
+                                
+                                if (input.files && input.files[0]) {
+                                    const reader = new FileReader();
+                                    reader.onload = function(e) {
+                                        previewImg.src = e.target.result;
+                                        preview.style.display = 'block';
+                                    };
+                                    reader.readAsDataURL(input.files[0]);
+                                }
+                            }
+                            
+                            function clearImage() {
+                                document.getElementById('productImageFile').value = '';
+                                document.getElementById('imagePreview').style.display = 'none';
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer-->
+    <footer class="py-5 bg-dark">
+        <div class="container">
+            <p class="m-0 text-center text-white">Copyright &copy; Your Website 2023</p>
+        </div>
+    </footer>
+    <!-- Bootstrap core JS-->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core theme JS-->
+    <script src="/js/scripts.js"></script>
+</body>
+
+</html>
