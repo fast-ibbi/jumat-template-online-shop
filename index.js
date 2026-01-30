@@ -156,12 +156,25 @@ const products = [
 
 // render view index dengan data products
 app.get("/", (req,res) => {
-  res.render("index",{ products});
+  const products = db.prepare('SELECT * FROM products').all();
+  // Convert inStock from 0/1 to boolean
+  const productsWithBoolean = products.map(p => ({...p, inStock: p.inStock === 1}));
+  res.render('index', { 
+    products: productsWithBoolean 
+  });
 })
 
 // render view product dengan data product sesuai id
 app.get('/product/:id', (req,res) => {
-  res.render('product',{ product: products[req.params.id - 1]});
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    if (product) {
+      product.inStock = product.inStock === 1;
+      
+      res.render('product', { 
+        title: product.name + ' - Product Detail', 
+        product,
+      });
+    }
 })
 
 app.get('/admin/products', (req,res) => {
@@ -204,9 +217,107 @@ app.get('/admin/products/new', (req,res) => {
 });
 
 app.get('/admin/products/:id/edit', (req,res) => {
-  res.render('admin/product/edit',{
-    product: products[req.params.id - 1]
-  });
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+  if (product) {
+    product.inStock = product.inStock === 1;
+    res.render('admin/product/edit', { 
+      product,
+    });
+  } else {
+    res.status(404).send('Product not found');
+  }
+});
+
+// Delete product
+app.delete('/admin/products/:id', (req, res) => {
+    // Get product to clean up image file
+    const product = db.prepare('SELECT image FROM products WHERE id = ?').get(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Delete the product from database
+    const result = db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Clean up uploaded image file if it exists
+    if (product.image && product.image.startsWith('/uploads/')) {
+      const imagePath = path.join(__dirname, 'public', product.image);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (err) {
+          console.warn('Could not delete image file:', err.message);
+        }
+      }
+    }
+    
+    res.json({ success: true });
+});
+
+// Update product (handle form POST with _method)
+app.post('/admin/products/:id', upload.single('productImage'), (req, res) => {
+  try {
+    const { name, price, category, inStock, description } = req.body;
+    const inStockValue = inStock === true || inStock === 'true' ? 1 : 0;
+    
+    // Get current product to preserve image if no new one provided
+    const currentProduct = db.prepare('SELECT image FROM products WHERE id = ?').get(req.params.id);
+    if (!currentProduct) {
+      return res.status(404).send('Product not found');
+    }
+    
+    // Handle image - check for uploaded file, URL, or keep current
+    let imagePath = currentProduct.image; // Default to current image
+    
+    if (req.file) {
+      // If file was uploaded, use the uploaded file path
+      imagePath = '/uploads/' + req.file.filename;
+      
+      // Clean up old uploaded file if it was a local upload
+      if (currentProduct.image && currentProduct.image.startsWith('/uploads/')) {
+        const oldFilePath = path.join(__dirname, 'public', currentProduct.image);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (err) {
+            console.warn('Could not delete old image file:', err.message);
+          }
+        }
+      }
+    } else if (req.body.imageUrl && req.body.imageUrl.trim() !== '' && req.body.imageUrl !== currentProduct.image) {
+      // If no file uploaded but URL provided and different from current, use the URL
+      imagePath = req.body.imageUrl.trim();
+      
+      // Clean up old uploaded file if it was a local upload
+      if (currentProduct.image && currentProduct.image.startsWith('/uploads/')) {
+        const oldFilePath = path.join(__dirname, 'public', currentProduct.image);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (err) {
+            console.warn('Could not delete old image file:', err.message);
+          }
+        }
+      }
+    }
+    
+    const result = db.prepare('UPDATE products SET name = ?, price = ?, category = ?, inStock = ?, image = ?, description = ? WHERE id = ?')
+      .run(name, parseFloat(price), category, inStockValue, imagePath, description || '', req.params.id);
+    
+    if (result.changes === 0) {
+      return res.status(404).send('Product not found');
+    }
+    res.redirect('/admin/products');
+  } catch (err) {
+    console.error(err.message);
+    if (err.message === 'Only image files are allowed!') {
+      return res.status(400).send('Error: Only image files are allowed!');
+    }
+    res.status(500).send('Database error');
+  }
 });
 
 // Start server

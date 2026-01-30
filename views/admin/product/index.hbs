@@ -60,3 +60,23 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Delete Product Function
+    async function deleteProduct(id) {
+        if (confirm('Are you sure you want to delete this product?')) {
+            try {
+                const response = await fetch(`/admin/products/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('Product deleted successfully!');
+                    location.reload();
+                }
+            } catch (error) {
+                alert('Error deleting product: ' + error.message);
+            }
+        }
+    }
+</script>
